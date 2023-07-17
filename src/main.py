@@ -4,14 +4,14 @@ from OpenGL.GL import *
 from OpenGL.GL.shaders import compileProgram,compileShader
 import numpy as np
 # TODO remover pyrr
-import pyrr
+import pyrr 
 from PIL import Image
 
 SCREEN_WIDTH = 640
 SCREEN_HEIGHT = 480
 
 GLOBAL_X = np.array([1,0,0], dtype=np.float32)
-GLOBAL_Y = np.array([0,1,0], dtype=np.float32)
+GLOBAL_Y = np.array([0,1,0], dtype=np.float32) 
 GLOBAL_Z = np.array([0,0,1], dtype=np.float32)
 
 ENTITY_TYPE = {
@@ -19,6 +19,8 @@ ENTITY_TYPE = {
     "BEER": 1,
     "WHISKY": 2,
     "FAN": 3,
+    "WALLS": 4,
+    "FLOORS": 5,
 }
 
 UNIFORM_TYPE = {
@@ -222,6 +224,20 @@ class Fan(Entity):
     def update(self, dt, camera_pos):
         pass
 
+class Walls(Entity):
+    def __init__(self, position, eulers):
+        super().__init__(position, eulers)
+    
+    def update(self, dt, camera_pos):
+        pass
+
+class Floors(Entity):
+    def __init__(self, position, eulers):
+        super().__init__(position, eulers)
+    
+    def update(self, dt, camera_pos):
+        pass
+
 # lida com as entidades
 class Scene:
     def __init__(self):
@@ -238,6 +254,12 @@ class Scene:
             ],
             ENTITY_TYPE["FAN"]: [
                 Fan(position = [6,0,0], eulers = [0,0,0]),
+            ],  
+            ENTITY_TYPE["WALLS"]: [
+                Walls(position = [6,0,0], eulers = [0,0,0]),
+            ],
+            ENTITY_TYPE["FLOORS"]: [
+                Floors(position = [6,0,0], eulers = [0,0,0]),
             ],
         }
 
@@ -395,18 +417,20 @@ class GraphicsEngine:
 
         self._get_uniform_locations()
     
-    def _set_up_opengl(self) -> None:
+    def _set_up_opengl(self):
         glClearColor(0.1, 0.1, 0.1, 1)
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-
+    
     def _create_assets(self):
         self.meshes = {
             ENTITY_TYPE["BAR_COUNTER"]: Mesh("models/bar_counter.obj"),
             ENTITY_TYPE["BEER"]: Mesh("models/beer.obj"),
             ENTITY_TYPE["WHISKY"]: Mesh("models/whisky.obj"),
             ENTITY_TYPE["FAN"]: Mesh("models/fan.obj"),
+            ENTITY_TYPE["WALLS"]: Mesh("models/walls.obj"),
+            ENTITY_TYPE["FLOORS"]: Mesh("models/floors.obj"),
         }
 
         self.materials = {
@@ -414,6 +438,8 @@ class GraphicsEngine:
             ENTITY_TYPE["BEER"]: Material("gfx/beer.jpg"),
             ENTITY_TYPE["WHISKY"]: Material("gfx/whisky.jpg"),
             ENTITY_TYPE["FAN"]: Material("gfx/fan.jpg"),
+            ENTITY_TYPE["WALLS"]: Material("gfx/wall.jpg"),
+            ENTITY_TYPE["FLOORS"]: Material("gfx/floor.jpg"),
         }
         
         self.shaders = {
@@ -617,6 +643,8 @@ class Material:
 
     def destroy(self):
         glDeleteTextures(1, (self.texture,))
+
+
 
 my_app = App()
 my_app.run()
