@@ -3,8 +3,6 @@ import glfw.GLFW as GLFW_CONSTANTS
 from OpenGL.GL import *
 from OpenGL.GL.shaders import compileProgram,compileShader
 import numpy as np
-# TODO remover pyrr
-import pyrr 
 from PIL import Image
 
 SCREEN_WIDTH = 640
@@ -110,6 +108,43 @@ def read_face(face_description, v, vt, vn, vertices):
     for element in vn[int(v_vt_vn[2]) - 1]:
         vertices.append(element)
 
+def perspective_projection(fovy, aspect, near, far):
+    """
+    E 0 A 0
+    0 F B 0
+    0 0 C D
+    0 0-1 0
+
+    A = (right+left)/(right-left)
+    B = (top+bottom)/(top-bottom)
+    C = -(far+near)/(far-near)
+    D = -2*far*near/(far-near)
+    E = 2*near/(right-left)
+    F = 2*near/(top-bottom)
+    """
+
+    ymax = near * np.tan(fovy * np.pi / 360.0)
+    xmax = ymax * aspect
+
+    left = -xmax
+    right = xmax
+    bottom = -ymax
+    top = ymax
+
+    A = (right + left) / (right - left)
+    B = (top + bottom) / (top - bottom)
+    C = -(far + near) / (far - near)
+    D = -2. * far * near / (far - near)
+    E = 2. * near / (right - left)
+    F = 2. * near / (top - bottom)
+
+    return np.array((
+        (  E, 0., 0., 0.),
+        ( 0.,  F, 0., 0.),
+        (  A,  B,  C,-1.),
+        ( 0., 0.,  D, 0.),
+    ), dtype=np.float32)
+
 # classe base para as entidades do jogo
 class Entity:
     def __init__(self, position, eulers):
@@ -120,33 +155,34 @@ class Entity:
         pass
 
     def get_model_transform(self):
-        # TODO remover pyrr
-        model_transform = pyrr.matrix44.create_identity(dtype=np.float32)
+        mt = np.identity(4, dtype=np.float32)
 
-        model_transform = pyrr.matrix44.multiply(
-            m1=model_transform, 
-            m2=pyrr.matrix44.create_from_axis_rotation(
-                axis = GLOBAL_Y,
-                theta = np.radians(self.eulers[1]), 
-                dtype = np.float32
-            )
-        )
+        # rotacao no eixo y
+        angle_rad = np.radians(self.eulers[1])
+        rotation_matrix = np.array([
+            [np.cos(angle_rad), 0.0, np.sin(angle_rad), 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [-np.sin(angle_rad), 0.0, np.cos(angle_rad), 0.0],
+            [0.0, 0.0, 0.0, 1.0]
+        ], dtype=np.float32)
+        mt = np.dot(mt, rotation_matrix)
 
-        model_transform = pyrr.matrix44.multiply(
-            m1=model_transform, 
-            m2=pyrr.matrix44.create_from_axis_rotation(
-                axis = GLOBAL_Z,
-                theta = np.radians(self.eulers[2]), 
-                dtype = np.float32
-            )
-        )
+        # rotacao no eixo z
+        angle_rad = np.radians(self.eulers[2])
+        rotation_matrix = np.array([
+            [np.cos(angle_rad), -np.sin(angle_rad), 0.0, 0.0],
+            [np.sin(angle_rad), np.cos(angle_rad), 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0]
+        ], dtype=np.float32)
+        mt = np.dot(mt, rotation_matrix)
 
-        return pyrr.matrix44.multiply(
-            m1=model_transform, 
-            m2=pyrr.matrix44.create_from_translation(
-                vec=np.array(self.position),dtype=np.float32
-            )
-        )
+
+        # translacao 
+        translation = np.identity(4, dtype=np.float32)
+        translation[3, 0:3] = self.position[:3]
+
+        return np.dot(mt, translation)
 
 # camera em primeira pessoa
 class Camera(Entity):
@@ -172,11 +208,26 @@ class Camera(Entity):
         self.up = np.cross(self.right, self.forwards)
 
     def get_view_transform(self):
-        # TODO remover pyrr
-        return pyrr.matrix44.create_look_at(
-            eye = self.position,
-            target = self.position + self.forwards,
-            up = self.up, dtype = np.float32)
+        eye = np.array(self.position, dtype=np.float32)
+        target = np.array(self.position + self.forwards, dtype=np.float32)
+        up = np.array(self.up, dtype=np.float32)
+
+        f = target - eye
+        f = f / np.linalg.norm(f)
+
+        r = np.cross(f, up)
+        r = r / np.linalg.norm(r)
+
+        u = np.cross(r, f)
+        u = u / np.linalg.norm(u)
+
+
+        return np.array((
+            (r[0], u[0], -f[0], 0.),
+            (r[1], u[1], -f[1], 0.),
+            (r[2], u[2], -f[2], 0.),
+            (-np.dot(r, eye), -np.dot(u, eye), np.dot(f, eye), 1.0)
+        ), dtype=np.float32)
     
     # move a camera
     def move(self, d_pos):
@@ -220,9 +271,20 @@ class Whisky(Entity):
 class Fan(Entity):
     def __init__(self, position, eulers):
         super().__init__(position, eulers)
+        self.rotation = 'left'
     
     def update(self, dt, camera_pos):
-        pass
+        if self.rotation == 'right':
+            self.eulers[2] += 0.25 * dt
+
+            if self.eulers[2] > 30:
+                self.rotation = 'left'
+        else:
+            self.eulers[2] -= 0.25 * dt
+
+            if self.eulers[2] < -30:
+                self.rotation = 'right'
+
 
 class Walls(Entity):
     def __init__(self, position, eulers):
@@ -253,7 +315,7 @@ class Scene:
                 Whisky(position = [6,0,0], eulers = [0,0,0]),
             ],
             ENTITY_TYPE["FAN"]: [
-                Fan(position = [6,0,0], eulers = [0,0,0]),
+                Fan(position = [6,0,1.93], eulers = [0,0,0]),
             ],  
             ENTITY_TYPE["WALLS"]: [
                 Walls(position = [6,0,0], eulers = [0,0,0]),
@@ -374,7 +436,7 @@ class App:
         if self._keys.get(GLFW_CONSTANTS.GLFW_KEY_D, False):
             d_pos += GLOBAL_Y
 
-        length = pyrr.vector.length(d_pos)
+        length = np.linalg.norm(d_pos)
 
         if abs(length) < 0.00001:
             return
@@ -450,10 +512,9 @@ class GraphicsEngine:
         }
     
     def _set_onetime_uniforms(self):
-        # TODO remover pyrr
-        projection_transform = pyrr.matrix44.create_perspective_projection(
+        projection_transform = perspective_projection(
             fovy = 45, aspect = 640/480, 
-            near = 0.1, far = 50, dtype=np.float32
+            near = 0.1, far = 50
         )
 
         for shader in self.shaders.values():
@@ -559,14 +620,12 @@ class Shader:
         self.single_uniforms = {}
         self.multi_uniforms = {}
     
-    def cache_single_location(self, 
-        uniform_type, uniform_name) -> None:
+    def cache_single_location(self, uniform_type, uniform_name):
 
         self.single_uniforms[uniform_type] = glGetUniformLocation(
             self.program, uniform_name)
     
-    def cache_multi_location(self, 
-        uniform_type, uniform_name) -> None:
+    def cache_multi_location(self, uniform_type, uniform_name):
 
         if uniform_type not in self.multi_uniforms:
             self.multi_uniforms[uniform_type] = []
@@ -612,13 +671,13 @@ class Mesh:
         glEnableVertexAttribArray(2)
         glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 32, ctypes.c_void_p(20))
 
-    def arm_for_drawing(self) -> None:
+    def arm_for_drawing(self):
         glBindVertexArray(self.vao)
     
-    def draw(self) -> None:
+    def draw(self):
         glDrawArrays(GL_TRIANGLES, 0, self.vertex_count)
 
-    def destroy(self) -> None:
+    def destroy(self):
         glDeleteVertexArrays(1,(self.vao,))
         glDeleteBuffers(1,(self.vbo,))
 
