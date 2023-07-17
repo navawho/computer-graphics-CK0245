@@ -45,6 +45,7 @@ class Game:
         )
 
         self._keys = {}
+        self.state = STATE["IDLE"]
         glfw.set_key_callback(self.window, self._key_callback)
     
     def _key_callback(self, window, key, scancode, action, mods):
@@ -61,7 +62,7 @@ class Game:
     def _create_assets(self):
         self.renderer = GraphicsEngine()
 
-        self.scene = Scene()
+        self.scene = Scene(self.state)
     
     def run(self):
         running = True
@@ -95,6 +96,12 @@ class Game:
             d_pos -= GLOBAL_X
         if self._keys.get(GLFW_CONSTANTS.GLFW_KEY_D, False):
             d_pos += GLOBAL_Y
+
+        if self._keys.get(GLFW_CONSTANTS.GLFW_KEY_F, False):
+            self.scene.state = STATE["PICK_WHISKY"]
+
+        if self._keys.get(GLFW_CONSTANTS.GLFW_KEY_G, False):
+            self.scene.state = STATE["RELEASE_WHISKY"]
 
         length = np.linalg.norm(d_pos)
 

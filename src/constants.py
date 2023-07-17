@@ -33,3 +33,9 @@ PIPELINE_TYPE = {
     "STANDARD": 0,
     "EMISSIVE": 1,
 }
+
+STATE = {
+    "IDLE": 0,
+    "PICK_WHISKY": 1,
+    "RELEASE_WHISKY": 2,
+}

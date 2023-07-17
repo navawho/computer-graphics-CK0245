@@ -3,11 +3,12 @@ import numpy as np
 from constants import *
 
 class Entity:
-    def __init__(self, position, eulers):
+    def __init__(self, position, eulers, state = None):
         self.position = np.array(position, dtype=np.float32)
         self.eulers = np.array(eulers, dtype=np.float32)
+        self.state = state
 
-    def update(self, dt, camera_pos):
+    def update(self, dt, camera_pos, new_state):
         pass
 
     def get_model_transform(self):
@@ -106,29 +107,38 @@ class BarCounter(Entity):
     def __init__(self, position, eulers):
         super().__init__(position, eulers)
     
-    def update(self, dt, camera_pos):
+    def update(self, dt, camera_pos, new_state):
         pass
 
 class Beer(Entity):
-    def __init__(self, position, eulers):
-        super().__init__(position, eulers)
+    def __init__(self, position, eulers, state):
+        super().__init__(position, eulers, state)
     
-    def update(self, dt, camera_pos):
+    def update(self, dt, camera_pos, new_state):
         pass
 
 class Whisky(Entity):
-    def __init__(self, position, eulers):
-        super().__init__(position, eulers)
+    def __init__(self, position, eulers, state):
+        super().__init__(position, eulers, state)
     
-    def update(self, dt, camera_pos):
-        pass
+    def update(self, dt, camera_pos, new_state):
+        if self.state == new_state:
+            return
+
+        if self.state == STATE["IDLE"] and new_state == STATE["PICK_WHISKY"]:
+            self.position = [camera_pos[0], camera_pos[1]+1, camera_pos[2]-0.4]
+
+        if self.state == STATE["PICK_WHISKY"] and new_state == STATE["RELEASE_WHISKY"]:
+            self.position = [2.3,0,1.7]
+            self.state = STATE["IDLE"]
+
 
 class Fan(Entity):
     def __init__(self, position, eulers):
         super().__init__(position, eulers)
         self.rotation = 'left'
     
-    def update(self, dt, camera_pos):
+    def update(self, dt, camera_pos, new_state):
         if self.rotation == 'right':
             self.eulers[2] += 0.25 * dt
 
@@ -144,21 +154,21 @@ class Walls(Entity):
     def __init__(self, position, eulers):
         super().__init__(position, eulers)
     
-    def update(self, dt, camera_pos):
+    def update(self, dt, camera_pos, new_state):
         pass
 
 class Floors(Entity):
     def __init__(self, position, eulers):
         super().__init__(position, eulers)
     
-    def update(self, dt, camera_pos):
+    def update(self, dt, camera_pos, new_state):
         pass
 
 class Lamp(Entity):
     def __init__(self, position, eulers):
         super().__init__(position, eulers)
     
-    def update(self, dt, camera_pos):
+    def update(self, dt, camera_pos, new_state):
         self.eulers[2] += 0.2 * dt
         
         if self.eulers[2] > 360:
