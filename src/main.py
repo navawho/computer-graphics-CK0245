@@ -19,6 +19,8 @@ ENTITY_TYPE = {
     "FAN": 3,
     "WALLS": 4,
     "FLOORS": 5,
+    "LAMP": 6,
+    "LAMP_2": 7,
 }
 
 UNIFORM_TYPE = {
@@ -300,6 +302,23 @@ class Floors(Entity):
     def update(self, dt, camera_pos):
         pass
 
+class Lamp(Entity):
+    def __init__(self, position, eulers):
+        super().__init__(position, eulers)
+    
+    def update(self, dt, camera_pos):
+        self.eulers[2] += 0.2 * dt
+        
+        if self.eulers[2] > 360:
+            self.eulers[2] -= 360
+
+class Light(Entity):
+    def __init__(self, position, color, strength):
+        super().__init__(position, eulers = [0,0,0])
+        self.color = np.array(color, dtype=np.float32)
+        self.strength = strength
+
+
 # lida com as entidades
 class Scene:
     def __init__(self):
@@ -323,9 +342,18 @@ class Scene:
             ENTITY_TYPE["FLOORS"]: [
                 Floors(position = [6,0,0], eulers = [0,0,0]),
             ],
+            ENTITY_TYPE["LAMP"]: [
+                Lamp(position = [6,0,5], eulers = [0,0,0]),
+            ],
+            ENTITY_TYPE["LAMP_2"]: [
+                Lamp(position = [6,10,5], eulers = [0,0,0]),
+            ],
         }
 
-        self.lights = []
+        self.lights = [
+            Light(position=[6,0,4], color = [0.9,0.9,0.9], strength=5),
+            Light(position=[6,10,4], color = [0.9,0.9,0.9], strength=3)
+        ]
 
         self.player = Camera(
             position = [0,0,2]
@@ -493,6 +521,8 @@ class GraphicsEngine:
             ENTITY_TYPE["FAN"]: Mesh("models/fan.obj"),
             ENTITY_TYPE["WALLS"]: Mesh("models/walls.obj"),
             ENTITY_TYPE["FLOORS"]: Mesh("models/floors.obj"),
+            ENTITY_TYPE["LAMP"]: Mesh("models/lamp.obj"),
+            ENTITY_TYPE["LAMP_2"]: Mesh("models/lamp.obj"),
         }
 
         self.materials = {
@@ -502,6 +532,8 @@ class GraphicsEngine:
             ENTITY_TYPE["FAN"]: Material("gfx/fan.jpg"),
             ENTITY_TYPE["WALLS"]: Material("gfx/wall.jpg"),
             ENTITY_TYPE["FLOORS"]: Material("gfx/floor.jpg"),
+            ENTITY_TYPE["LAMP"]: Material("gfx/lamp.jpg"),
+            ENTITY_TYPE["LAMP_2"]: Material("gfx/lamp.jpg"),
         }
         
         self.shaders = {
