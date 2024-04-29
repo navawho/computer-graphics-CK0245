@@ -15,11 +15,6 @@ pip3 install glfw OpenGL numpy PIL
 
 Versão do python utilizada: `3.8.10`
 
-Dupla:
-
-- Matheus Navarro - 411605
-- Vinícius Sabariz - 420728
-
 ## Como executar
 
 Para executar, basta rodar o arquivo `Game.py` com o python (dentro da pasta `src`):
